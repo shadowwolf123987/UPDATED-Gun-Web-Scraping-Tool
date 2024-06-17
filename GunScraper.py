@@ -27,8 +27,8 @@ try:
     dbPort = int(os.environ["DB_PORT"])
     database = os.environ["DATABASE"]
     
-    wifiSsid = os.environ["WIFI_SSID"]
-    wifiPass = os.environ["WIFI_PASS"]
+    #wifiSsid = os.environ["WIFI_SSID"]
+    #wifiPass = os.environ["WIFI_PASS"]
 
     openAiApiKey = os.environ["OPENAI_API_KEY"]
 
@@ -70,8 +70,8 @@ def ScrapeGunPage(gunType):
     url = "https://en.wikipedia.org/wiki/List_of_"+gunHeader
     
     #Define gun lists
-    names = []
-    images = []
+    namesList = []
+    imagesList = []
     
     #Get page from URL
     page = requests.get(url)
@@ -100,25 +100,34 @@ def ScrapeGunPage(gunType):
     #Get all names and images for page
     body = table.find_all("td")
     
-    while namesCol <= len(body) and imagesCol <= len(body):
+    while namesCol <= len(body) and imagesCol <= len(body): 
         try:
-            #Try to get name and image url of gun
-            name = body[namesCol].get_text()
-            image = body[imagesCol].find_all("img")[0].get("src")
+            #Get all names and imgs for row (For checking if theres multiple guns in one row)
+            names = body[namesCol].find_all("a")
+            imgs = body[imagesCol].find_all("img")
+                
         except:
             #If errored, skip gun
             namesCol += headerCount
             imagesCol += headerCount
+            
         else:
-            #Else, add name and image to list
-            names.append(name)
-            images.append(image)
+            #Loops through list of names and imgs per row for cases of multiple names/imgs in a row
+            for name,img in zip(names,imgs):
+                
+                #Skips any gun family label text
+                if "family" in name.get_text():
+                    namesCol += headerCount
+                    imagesCol += headerCount
+                
+                namesList.append(name.get_text())
+                imagesList.append(img.get("src"))
             
             #Go to next gun
             namesCol += headerCount
             imagesCol += headerCount
         
-    return names,images
+    return namesList,imagesList
     
 arNames = []
 arImgs = []
@@ -149,25 +158,3 @@ def FilterGunData(names,imgs):
 
 arNames,arImgs = FilterGunData(arNames,arImgs)
 
-def OpenAiFilter(names,imgs):
-    prompt = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role":"user","content":f"""
-
-            Below, I have listed names and image urls for an educational gun quiz.
-             I need you to check these guns and remove the names and image paths for non mainstream guns that wouldnt be recognised by the public. 
-             Then output it as a comma separated list in the order name,image,name,image. Ensure you put no unneeded text in the prompt or the query wont work. 
-             You do not need to specify the id field as it is auto generated. Don't include the square brackets and ensure that the speech marks are included
-
-             {names}
-
-            {imgs}
-             
-            """}
-            ]
-        )
-    
-    print(prompt.choices[0].message)
-
-OpenAiFilter(arNames,arImgs)
