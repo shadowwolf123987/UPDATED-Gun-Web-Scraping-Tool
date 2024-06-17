@@ -1,10 +1,3 @@
-"""
-Web Scrape for each type of gun results from wikipedia, keep as separate lists
-Pass into Chat GPT and use prompt to filter out repeat guns for each type
-Directly Commit results to respective database tables (set up db on shadow dev)
-Set up raspberry Pi automation script to run python script based on set conditions and rules (BAT file?)
-"""
-
 #Module Imports
 from datetime import datetime
 
@@ -160,11 +153,18 @@ def OpenAiFilter(names,imgs):
     prompt = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role":"user","content":"""
+            {"role":"user","content":f"""
 
+            Below, I have listed names and image urls for an educational gun quiz.
+             I need you to check these guns and remove the names and image paths for non mainstream guns that wouldnt be recognised by the public. 
+             Then output it as a comma separated list in the order name,image,name,image. Ensure you put no unneeded text in the prompt or the query wont work. 
+             You do not need to specify the id field as it is auto generated. Don't include the square brackets and ensure that the speech marks are included
 
+             {names}
 
-"""}
+            {imgs}
+             
+            """}
             ]
         )
     
